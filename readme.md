@@ -3,6 +3,7 @@
 <p align="left">
   <img src="./assets/avatar.jpg" width="100" alt="avatar"/>
 </p>
+
 An aws lambda function to monitor websites status.
 It can be triggered by a CloudWatch event (cron every 5 minutes suggested).
 Requires 3 parameters `CSV_URL` (csv file with list of websites to parse), `WEBHOOK_URL` (from slack incoming webhooks) and `CHANNEL` (the slack channel to use).
