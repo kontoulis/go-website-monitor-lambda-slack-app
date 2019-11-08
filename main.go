@@ -12,14 +12,14 @@ import (
 	"sync"
 )
 
-type JsonInputEvent struct {
+type Config struct {
 	CsvUrl     string `json:"CSV_URL"`
 	WebHookUrl string `json:"WEBHOOK_URL"`
 	Channel    string `json:"CHANNEL"`
 }
 
-func run(jsonInput JsonInputEvent) {
-	csvUrl, err := getCsvUrl(jsonInput)
+func run(config Config) {
+	csvUrl, err := config.get( "CSV_URL")
 	if err != nil {
 		panic(err)
 	}
@@ -45,12 +45,12 @@ func run(jsonInput JsonInputEvent) {
 	close(successes)
 
 	if len(failed) > 0 {
-		webHookUrl, err := getWebHookUrl(jsonInput)
+		webHookUrl, err := config.get("WEBHOOK_URL")
 		if err != nil {
 			panic(err)
 		}
 
-		channel, err := getChannel(jsonInput)
+		channel, err := config.get("CHANNEL")
 		if err != nil {
 			panic(err)
 		}
@@ -83,40 +83,28 @@ func checkUrl(waitGroup *sync.WaitGroup, url string, failed chan<- string, succe
 	}
 }
 
-func getCsvUrl(jsonInput JsonInputEvent) (string, error) {
-	csvUrl, found := os.LookupEnv("CSV_URL")
-	if !found && len(csvUrl) == 0 && len(jsonInput.CsvUrl) == 0 {
-		return "", errors.New("CSV_URL not found in env or json input")
+func (config Config) get(key string) (string, error){
+	var result string
+	switch key {
+	case "CSV_URL":
+		result = config.CsvUrl
+		break
+	case "WEBHOOK_URL":
+		result = config.WebHookUrl
+		break
+	case "CHANNEL":
+		result = config.Channel
+		break
 	}
-	if len(jsonInput.CsvUrl) > 0 {
-		return jsonInput.CsvUrl, nil
-	} else {
-		return csvUrl, nil
+	if len(result) > 0 {
+		return result, nil
 	}
-}
+	result, found := os.LookupEnv(key)
+	if found {
+		return result, nil
+	}
 
-func getWebHookUrl(jsonInput JsonInputEvent) (string, error) {
-	webHookUrl, found := os.LookupEnv("WEBHOOK_URL")
-	if !found && len(webHookUrl) == 0 && len(jsonInput.WebHookUrl) == 0 {
-		return "", errors.New("WEBHOOK_URL not found in env or json input")
-	}
-	if len(jsonInput.WebHookUrl) > 0 {
-		return jsonInput.WebHookUrl, nil
-	} else {
-		return webHookUrl, nil
-	}
-}
-
-func getChannel(jsonInput JsonInputEvent) (string, error) {
-	channel, found := os.LookupEnv("CHANNEL")
-	if !found && len(channel) == 0 && len(jsonInput.Channel) == 0 {
-		return "", errors.New("CHANNEL not found in env or json input")
-	}
-	if len(jsonInput.Channel) > 0 {
-		return jsonInput.Channel, nil
-	} else {
-		return channel, nil
-	}
+	return "", errors.New(key + " not found in env or json input")
 }
 
 func readCSVFromUrl(url string) ([][]string, error) {
