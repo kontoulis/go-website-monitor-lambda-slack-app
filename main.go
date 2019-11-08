@@ -19,14 +19,8 @@ type Config struct {
 }
 
 func run(config Config) {
-	csvUrl, err := config.get( "CSV_URL")
-	if err != nil {
-		panic(err)
-	}
-	data, err := readCSVFromUrl(csvUrl)
-	if err != nil {
-		panic(err)
-	}
+	csvUrl:= config.get( "CSV_URL")
+	data := readCSVFromUrl(csvUrl)
 
 	var waitGroup sync.WaitGroup
 	failed := make(chan string, len(data))
@@ -45,19 +39,11 @@ func run(config Config) {
 	close(successes)
 
 	if len(failed) > 0 {
-		webHookUrl, err := config.get("WEBHOOK_URL")
-		if err != nil {
-			panic(err)
-		}
-
-		channel, err := config.get("CHANNEL")
-		if err != nil {
-			panic(err)
-		}
-		var text string = ""
-
+		webHookUrl := config.get("WEBHOOK_URL")
+		channel := config.get("CHANNEL")
+		text := ""
 		for urlError := range failed {
-			text += fmt.Sprintf("`" + urlError + "`\n")
+			text += "`" + urlError + "`\n"
 		}
 		payload := slack.Payload{
 			Text:      ":warning:Errors found in the following domains :\n" + text,
@@ -83,7 +69,7 @@ func checkUrl(waitGroup *sync.WaitGroup, url string, failed chan<- string, succe
 	}
 }
 
-func (config Config) get(key string) (string, error){
+func (config Config) get(key string) string{
 	var result string
 	switch key {
 	case "CSV_URL":
@@ -97,29 +83,29 @@ func (config Config) get(key string) (string, error){
 		break
 	}
 	if len(result) > 0 {
-		return result, nil
+		return result
 	}
 	result, found := os.LookupEnv(key)
 	if found {
-		return result, nil
+		return result
 	}
 
-	return "", errors.New(key + " not found in env or json input")
+	panic(errors.New(key + " not found in env or json input"))
 }
 
-func readCSVFromUrl(url string) ([][]string, error) {
+func readCSVFromUrl(url string) ([][]string) {
 	resp, err := http.Get(url)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
 	defer resp.Body.Close()
 	reader := csv.NewReader(resp.Body)
 	reader.Comma = ';'
 	data, err := reader.ReadAll()
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
-	return data, nil
+	return data
 }
 
 func main() {
